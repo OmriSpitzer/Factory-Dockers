@@ -4,6 +4,12 @@ import type { Worker } from "../types/worker"
 import SortableSection from "./SortableSection"
 import WorkerSection from "./WorkerSection"
 
+/**
+ * Factory display component
+ * 
+ * Displays the factory and its clients and workers
+ */
+
 const orderByIds = <T extends { id: string }>(ids: string[], incoming: T[]) => {
   const byId = new Map(incoming.map((item) => [item.id, item]))
   const kept = ids.flatMap((id) => {
@@ -26,17 +32,15 @@ const groupByType = (workers: Worker[]) => {
 
 const sectionOrder = ["assembler", "tester", "packager", "shipper"] as const
 
-const FactoryDisplay = ({
-  clients,
-  onClients,
-}: {
-  clients: Client[]
-  onClients: (clients: Client[]) => void
-}) => {
-  const [mappedWorkers, setMappedWorkers] = useState<Record<string, Worker[]>>({})
-  const workerOrder = useRef<Record<string, string[]>>({})
-  const clientOrder = useRef<string[]>([])
+const FactoryDisplay = (
+  {clients,onClients}:
+  {clients: Client[], onClients: (clients: Client[]) => void}
+  ) => {
+  const [mappedWorkers, setMappedWorkers] = useState<Record<string, Worker[]>>({})   // Mapped workers by type
+  const workerOrder = useRef<Record<string, string[]>>({})                           // Worker order by type
+  const clientOrder = useRef<string[]>([])                                            // Client order
 
+  // Load the workers and clients
   useEffect(() => {
     let cancelled = false
     let socket: WebSocket | null = null

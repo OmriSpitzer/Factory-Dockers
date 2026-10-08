@@ -26,7 +26,7 @@ const Card = ({
   return (
     <article
       className={`flex w-full flex-col items-center gap-2 rounded-2xl px-3 py-3 text-card-text ring-1 ring-border ${cardBackground[tone]} ${
-        lifted ? "shadow-md" : "shadow-sm"
+        lifted ? "shadow-lg" : "shadow-sm"
       }`}
     >
       {image ? (

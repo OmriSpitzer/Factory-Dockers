@@ -20,6 +20,7 @@ type Drag = {
   from: number
   over: number
   slot: number
+  dy: number
 }
 
 const BOTTOM_PAD = 16
@@ -110,10 +111,10 @@ const SortableSection = <T extends { id: string }>({
       node.style.transition = ""
       node.style.transform = ""
     })
-    const visual = event.currentTarget.querySelector<HTMLElement>("[data-card-visual]")
-    if (!visual) return
+    const visual = event.currentTarget
     const rect = visual.getBoundingClientRect()
-    const slotNode = event.currentTarget
+    const slotNode = visual.parentElement
+    if (!slotNode) return
     const nextRect = (slotNode.nextElementSibling as HTMLElement | null)?.getBoundingClientRect()
     const slot = nextRect ? nextRect.top - slotNode.getBoundingClientRect().top : rect.height + 12
     const originY = event.clientY
@@ -123,6 +124,7 @@ const SortableSection = <T extends { id: string }>({
       return box.top + box.height / 2
     })
 
+    let grabbing = false
     const move = (pointer: PointerEvent) => {
       if (!dragRef.current && Math.abs(pointer.clientY - originY) < 5) return
       const cards = itemsRef.current
@@ -139,13 +141,19 @@ const SortableSection = <T extends { id: string }>({
       let applied = clamp(over, 0, cards.length - 1) - from
       while (applied > 0 && rect.top + applied * slot + rect.height > limitBottom) applied -= 1
       while (applied < 0 && rect.top + applied * slot < limitTop) applied += 1
-      updateDrag({ id, from, over: from + applied, slot })
+      const dy = clamp(pointer.clientY - originY, limitTop - rect.top, limitBottom - rect.bottom)
+      if (!grabbing) {
+        grabbing = true
+        document.body.style.cursor = "grabbing"
+      }
+      updateDrag({ id, from, over: from + applied, slot, dy })
     }
 
     const up = () => {
       window.removeEventListener("pointermove", move)
       window.removeEventListener("pointerup", up)
       window.removeEventListener("pointercancel", up)
+      if (grabbing) document.body.style.cursor = ""
       const current = dragRef.current
       if (current) {
         const places = new Map<string, Point>()
@@ -193,22 +201,29 @@ const SortableSection = <T extends { id: string }>({
           <div
             key={item.id}
             data-slot={item.id}
-            onPointerDown={onPointerDown(item.id)}
-            className={`flex touch-none justify-center select-none ${isDragged ? "cursor-grabbing" : "cursor-grab"}`}
+            className="flex touch-none justify-center select-none"
           >
             <div
               data-card-id={item.id}
               data-card-visual=""
-              className="w-[68%] max-w-36"
+              onPointerDown={onPointerDown(item.id)}
+              className={`w-[68%] max-w-36 ${drag ? "cursor-grabbing" : "cursor-grab"}`}
               style={
-                shift === 0
-                  ? undefined
-                  : {
+                isDragged && drag
+                  ? {
                       position: "relative",
-                      zIndex: isDragged ? 0 : 1,
-                      transform: `translateY(${shift}px)`,
-                      transition: "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
+                      zIndex: 5,
+                      transform: `translateY(${drag.dy}px) scale(1.03)`,
+                      transition: "none",
                     }
+                  : shift === 0
+                    ? undefined
+                    : {
+                        position: "relative",
+                        zIndex: 1,
+                        transform: `translateY(${shift}px)`,
+                        transition: "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)",
+                      }
               }
             >
               <Card {...fields} lifted={isDragged} />
