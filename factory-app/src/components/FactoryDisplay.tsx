@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react"
 import type { Client } from "../types/client"
 import type { Worker } from "../types/worker"
+import { getClients, subscribeClients } from "../services/clientService.js"
+import { getWorkers, subscribeWorkers } from "../services/workerService.js"
 import SortableSection from "./SortableSection"
 import WorkerSection from "./WorkerSection"
 
@@ -43,8 +45,6 @@ const FactoryDisplay = (
   // Load the workers and clients
   useEffect(() => {
     let cancelled = false
-    let socket: WebSocket | null = null
-    let retry: ReturnType<typeof setTimeout> | undefined
 
     const applyWorkers = (records: { id: string; worker: Worker }[]) => {
       const grouped = groupByType(records.map((record) => ({ ...record.worker, id: record.id })))
@@ -58,11 +58,7 @@ const FactoryDisplay = (
     }
 
     const loadWorkers = () => {
-      fetch("/api/worker")
-        .then((response) => {
-          if (!response.ok) throw new Error("worker request failed")
-          return response.json()
-        })
+      getWorkers()
         .then((records: { id: string; worker: Worker }[]) => {
           if (!cancelled) applyWorkers(records)
         })
@@ -70,11 +66,7 @@ const FactoryDisplay = (
     }
 
     const loadClients = () => {
-      fetch("/api/client")
-        .then((response) => {
-          if (!response.ok) throw new Error("client request failed")
-          return response.json()
-        })
+      getClients()
         .then((records: Client[]) => {
           if (cancelled) return
           const ordered = orderByIds(clientOrder.current, records)
@@ -84,37 +76,23 @@ const FactoryDisplay = (
         .catch(() => {})
     }
 
-    const connect = () => {
-      if (cancelled) return
-      const protocol = location.protocol === "https:" ? "wss" : "ws"
-      socket = new WebSocket(`${protocol}://${location.host}/api/subscribe`)
-      socket.onmessage = (event) => {
-        if (cancelled) return
-        const payload = JSON.parse(event.data) as {
-          clients?: Client[]
-          workers?: { id: string; worker: Worker }[]
-        }
-        if (payload.clients) {
-          const ordered = orderByIds(clientOrder.current, payload.clients)
-          clientOrder.current = ordered.map((client) => client.id)
-          onClients(ordered)
-        }
-        if (payload.workers) applyWorkers(payload.workers)
-      }
-      socket.onclose = () => {
-        if (cancelled) return
-        retry = setTimeout(connect, 1000)
-      }
-    }
-
     loadWorkers()
     loadClients()
-    connect()
+    const unsubscribeClients = subscribeClients((records: Client[]) => {
+      if (cancelled) return
+      const ordered = orderByIds(clientOrder.current, records)
+      clientOrder.current = ordered.map((client) => client.id)
+      onClients(ordered)
+    })
+    const unsubscribeWorkers = subscribeWorkers((records: { id: string; worker: Worker }[]) => {
+      if (cancelled) return
+      applyWorkers(records)
+    })
 
     return () => {
       cancelled = true
-      clearTimeout(retry)
-      socket?.close()
+      unsubscribeClients()
+      unsubscribeWorkers()
     }
   }, [onClients]);
 
@@ -133,6 +111,8 @@ const FactoryDisplay = (
           caption: `${client.timeout}s`,
           image: client.image,
           tone: "client",
+          timerId: client.id,
+          timeout: client.timeout,
         })}
       />
       {sectionOrder.map((type) => (

@@ -1,3 +1,5 @@
+import Timer from "./Timer"
+
 const cardBackground = {
   client: "bg-client",
   assembler: "bg-assembler",
@@ -15,6 +17,8 @@ const Card = ({
   percent,
   tone,
   lifted = false,
+  timerId,
+  timeout,
 }: {
   title: string
   caption?: string
@@ -22,6 +26,8 @@ const Card = ({
   percent?: number
   tone: CardTone
   lifted?: boolean
+  timerId?: string
+  timeout?: number
 }) => {
   return (
     <article
@@ -30,12 +36,19 @@ const Card = ({
       }`}
     >
       {image ? (
-        <img
-          src={image}
-          alt=""
-          draggable={false}
-          className="pointer-events-none h-14 w-14 rounded-xl bg-white object-cover ring-2 ring-white"
-        />
+        <div className={timerId && timeout ? "relative h-14 w-14 shrink-0" : "contents"}>
+          <img
+            src={image}
+            alt=""
+            draggable={false}
+            className="pointer-events-none h-14 w-14 shrink-0 rounded-xl bg-white object-cover ring-2 ring-white"
+          />
+          {timerId && timeout ? (
+            <div className="absolute -right-1 -bottom-1 z-10">
+              <Timer id={timerId} timeout={timeout} />
+            </div>
+          ) : null}
+        </div>
       ) : null}
       <p className="text-center text-xs font-semibold tracking-[0.08em]">{title}</p>
       {caption ? (

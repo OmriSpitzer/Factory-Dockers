@@ -50,7 +50,7 @@ class Client(threading.Thread):
         self._stopped.set()
     
     # Get the client's dictionary
-    def __dict__(self) -> dict:
+    def snapshot(self) -> dict:
         return {
             "id": self.client_id,
             "name": self.name,
@@ -76,7 +76,7 @@ class ClientPool:
             client = Client(name, timeout=self.CLIENT_TIMEOUT)
             self._clients.append(client)
         client.start()
-        return dict(client)
+        return client.snapshot()
 
     # Remove the last client from the pool
     def remove_last(self) -> dict | None:
@@ -88,12 +88,12 @@ class ClientPool:
         # Stop the client
         client.stop()
         client.join(timeout=1)
-        return dict(client)
+        return client.snapshot()
 
     # Get all clients
     def all(self) -> list[dict]:
         with self._lock:
-            return [dict(client) for client in self._clients]
+            return [client.snapshot() for client in self._clients]
 
     # Generate a random name
     def _random_name(self, used: set[str]) -> str:

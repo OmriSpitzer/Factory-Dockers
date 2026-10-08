@@ -4,6 +4,7 @@ import Footer from "./components/Footer.tsx"
 import FactoryDisplay from "./components/FactoryDisplay.tsx"
 import { useUI } from "./contexts/uiContext.tsx"
 import type { Client } from "./types/client.tsx"
+import { addClient as createClient, removeClient as deleteClient } from "./services/clientService.js"
 
 /**
  * Main application component
@@ -19,13 +20,9 @@ const App = () => {
 
   // Add a client
   const addClient = async () => {
-    const response = await fetch("/api/client", { method: "POST" })
+    const client: Client = await createClient()
 
-    // Check if the response is ok
-    if (!response.ok) throw new Error("add client failed")
-    
     // Add the client to the list
-    const client: Client = await response.json()
     const newClients = [...clients, client]
     setClients(newClients)
 
@@ -34,13 +31,9 @@ const App = () => {
 
   // Remove a client
   const removeClient = async () => {
-    const response = await fetch("/api/client", { method: "DELETE" })
+    const client: Client = await deleteClient()
 
-    // Check if the response is ok
-    if (!response.ok) throw new Error("remove client failed")
-    
     // Remove the client from the list
-    const client: Client = await response.json()
     const newClients = clients.filter((item) => item.id !== client.id)
     setClients(newClients)
 

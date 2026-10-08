@@ -8,6 +8,8 @@ type CardFields = {
   image?: string
   percent?: number
   tone: "client" | "assembler" | "tester" | "packager" | "shipper"
+  timerId?: string
+  timeout?: number
 }
 
 type Point = {

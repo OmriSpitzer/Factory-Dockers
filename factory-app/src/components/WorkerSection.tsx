@@ -29,6 +29,8 @@ const WorkerSection = ({
         image: worker.image,
         percent: percentOf(worker),
         tone: worker.type,
+        timerId: worker.id,
+        timeout: worker.timeout,
       })}
     />
   )
